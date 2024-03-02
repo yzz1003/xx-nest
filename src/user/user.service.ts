@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { ConsoleLogger, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { User } from "./user.entity";
+import { PageDto, PageMetaDto, PageOptionsDto } from "../dto/pagination.dto";
 import { success } from "../hook";
+import { UserDto } from "./user.dto";
 
 @Injectable()
 export class UserService {
@@ -11,10 +13,17 @@ export class UserService {
     private userRepository: Repository<User>,
   ) {}
 
-  async getAllUsers(): Promise<User[]> {
-    return this.userRepository.find();
+  async getAllUsers(pageOptionsDto: PageOptionsDto): Promise<PageDto<User>> {
+    const { page, take } = pageOptionsDto;
+    const startIndex = (Number(page) - 1) * Number(take);
+    const endIndex = startIndex + Number(take);
+    const res = await this.userRepository.find();
+    return new PageDto(
+      res.slice(startIndex, endIndex),
+      new PageMetaDto({ pageOptionsDto, itemCount: res.length }),
+    );
   }
-  async createUser(userData: Partial<User>): Promise<User> {
+  async createUser(userData: UserDto): Promise<User> {
     const user = this.userRepository.create(userData);
     return this.userRepository.save(user);
   }
